@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin - Visitor Log</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: transparent;
+      position: relative;
+    }
+    .center-logo {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 400px;
+      height: 400px;
+      background: url(nct4.jpg) no-repeat center center;
+      background-size: contain;
+      transform: translate(-50%, -50%);
+      z-index: -1;
+      pointer-events: none;
+    }
+    header {
+      background: linear-gradient(to right, #007BFF, #ffc107);
+      color: white;
+      padding: 1px 20px;
+      text-align: center;
+      position: relative;
+    }
+    
+    .logout-btn {
+      position: absolute;
+      right: 20px;
+      top: 30px;
+      padding: 8px 12px;
+      background-color: #dc3545;
+      border: none;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .container {
+      padding: 30px;
+    }
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .actions input[type="text"] {
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      width: 250px;
+    }
+    .actions > div {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .actions button {
+      padding: 10px 15px;
+      border: none;
+      background-color: #28a745;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+    .actions button:hover {
+      background-color: #218838;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: white;
+      margin-bottom: 30px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #007BFF;
+      color: white;
+    }
+    td button {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      color: white;
+    }
+    .edit-btn { background-color: #ffc107; }
+    .delete-btn { background-color: #dc3545; }
+    .restore-btn { background-color: #17a2b8; }
+    .permanent-delete-btn { background-color: #6c757d; }
+    @media (max-width: 768px) {
+      .actions {
+        flex-direction: column;
+        gap: 10px;
+      }
+      .actions input {
+        width: 100%;
+      }
+      .actions > div {
+        justify-content: flex-start;
+      }
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 10% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 90%;
+      max-width: 500px;
+      border-radius: 10px;
+    }
+    .modal-content input {
+      width: 100%;
+      padding: 8px;
+      margin: 8px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    .modal-content button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .save-btn {
+      background-color: #007bff;
+      color: white;
+    }
+    .cancel-btn {
+      background-color: #6c757d;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="center-logo"></div>
+  <header>
+    <h1>Admin Dashboard - Visitor Log</h1>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </header>
+  <div class="container">
+    <div class="actions">
+      <input type="text" id="searchInput" onkeyup="searchVisitor()" placeholder="Search by name..." />
+      <div>
+        <button onclick="openModal()">Add Visitor</button>
+        <button onclick="exportToCSV()">Export</button>
+      </div>
+    </div>
+
+    <table id="visitorTable">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll(this, 'visitor')"></th>
+          <th>Name</th><th>Age</th><th>Contact</th><th>Purpose</th><th>Person to Visit</th><th>Date</th><th>Time In</th><th>Time Out</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="visitorTableBody"></tbody>
+    </table>
+
+    <button onclick="deleteSelected()">Delete Selected</button>
+
+    <h2>Deleted Visitors (Trash)</h2>
+    <table id="deletedTable">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="selectAllDeleted" onclick="toggleSelectAll(this, 'deleted')"></th>
+          <th>Name</th><th>Deleted At</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="deletedTableBody"></tbody>
+    </table>
+
+    <button onclick="permanentlyDeleteSelected()">Permanently Delete Selected</button>
+  </div>
+
+  <!-- Modal Form -->
+  <div id="visitorModal" class="modal">
+    <div class="modal-content">
+      <h3 id="modalTitle">Add Visitor</h3>
+      <input id="name" placeholder="Name">
+      <input id="age" placeholder="Age">
+      <input id="contact" placeholder="Contact">
+      <input id="purpose" placeholder="Purpose">
+      <input id="person" placeholder="Person to Visit">
+      <input id="date" type="date">
+      <input id="timeIn" type="time">
+      <input id="timeOut" type="time">
+      <button class="save-btn" onclick="saveVisitor()">Save</button>
+      <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+
+  <script>
+    let visitors = JSON.parse(localStorage.getItem('visitorLogs')) || [];
+    let deletedVisitors = JSON.parse(localStorage.getItem('deletedVisitors')) || [];
+    let editIndex = null;
+
+    function renderVisitors() {
+      const tableBody = document.getElementById('visitorTableBody');
+      tableBody.innerHTML = '';
+      visitors.forEach((v, i) => {
+        tableBody.innerHTML += `
+          <tr>
+            <td><input type="checkbox" class="visitorCheckbox" value="${i}"></td>
+            <td>${v.name}</td><td>${v.age}</td><td>${v.contact}</td><td>${v.purpose}</td>
+            <td>${v.person}</td><td>${v.date}</td><td>${v.timeIn}</td><td>${v.timeOut}</td>
+            <td>
+              <button class="edit-btn" onclick="editVisitor(${i})">Edit</button>
+              <button class="delete-btn" onclick="deleteVisitor(${i})">Delete</button>
+            </td>
+          </tr>`;
+      });
+    }
+
+    function renderDeletedVisitors() {
+      const deletedBody = document.getElementById('deletedTableBody');
+      deletedBody.innerHTML = '';
+      deletedVisitors.forEach((v, i) => {
+        deletedBody.innerHTML += `
+          <tr>
+            <td><input type="checkbox" class="deletedCheckbox" value="${i}"></td>
+            <td>${v.name}</td><td>${v.deletedAt}</td>
+            <td>
+              <button class="restore-btn" onclick="restoreVisitor(${i})">Restore</button>
+              <button class="permanent-delete-btn" onclick="permanentlyDeleteVisitor(${i})">Delete Permanently</button>
+            </td>
+          </tr>`;
+      });
+    }
+
+    function openModal() {
+      editIndex = null;
+      document.getElementById("modalTitle").innerText = "Add Visitor";
+      document.querySelectorAll("#visitorModal input").forEach(input => input.value = "");
+      document.getElementById("visitorModal").style.display = "block";
+    }
+
+    function closeModal() {
+      document.getElementById("visitorModal").style.display = "none";
+    }
+
+    function saveVisitor() {
+      const visitor = {
+        name: document.getElementById("name").value,
+        age: document.getElementById("age").value,
+        contact: document.getElementById("contact").value,
+        purpose: document.getElementById("purpose").value,
+        person: document.getElementById("person").value,
+        date: document.getElementById("date").value,
+        timeIn: document.getElementById("timeIn").value,
+        timeOut: document.getElementById("timeOut").value
+      };
+
+      if (editIndex !== null) {
+        visitors[editIndex] = visitor;
+      } else {
+        visitors.push(visitor);
+      }
+
+      localStorage.setItem('visitorLogs', JSON.stringify(visitors));
+      closeModal();
+      renderVisitors();
+    }
+
+    function editVisitor(index) {
+      const v = visitors[index];
+      editIndex = index;
+      document.getElementById("modalTitle").innerText = "Edit Visitor";
+      document.getElementById("name").value = v.name;
+      document.getElementById("age").value = v.age;
+      document.getElementById("contact").value = v.contact;
+      document.getElementById("purpose").value = v.purpose;
+      document.getElementById("person").value = v.person;
+      document.getElementById("date").value = v.date;
+      document.getElementById("timeIn").value = v.timeIn;
+      document.getElementById("timeOut").value = v.timeOut;
+      document.getElementById("visitorModal").style.display = "block";
+    }
+
+    function deleteVisitor(index) {
+      if (confirm(`Move visitor "${visitors[index].name}" to trash?`)) {
+        const deleted = { ...visitors[index], deletedAt: new Date().toLocaleString() };
+        deletedVisitors.push(deleted);
+        visitors.splice(index, 1);
+        localStorage.setItem('visitorLogs', JSON.stringify(visitors));
+        localStorage.setItem('deletedVisitors', JSON.stringify(deletedVisitors));
+        renderVisitors();
+        renderDeletedVisitors();
+      }
+    }
+
+    function restoreVisitor(index) {
+      const restored = deletedVisitors.splice(index, 1)[0];
+      delete restored.deletedAt;
+      visitors.push(restored);
+      localStorage.setItem('visitorLogs', JSON.stringify(visitors));
+      localStorage.setItem('deletedVisitors', JSON.stringify(deletedVisitors));
+      renderVisitors();
+      renderDeletedVisitors();
+    }
+
+    function permanentlyDeleteVisitor(index) {
+      if (confirm("Delete this record permanently?")) {
+        deletedVisitors.splice(index, 1);
+        localStorage.setItem('deletedVisitors', JSON.stringify(deletedVisitors));
+        renderDeletedVisitors();
+      }
+    }
+
+    function deleteSelected() {
+      const selected = document.querySelectorAll(".visitorCheckbox:checked");
+      if (!selected.length) return alert("No visitor selected.");
+      if (!confirm("Move selected visitors to trash?")) return;
+      [...selected].reverse().forEach(checkbox => {
+        const i = parseInt(checkbox.value);
+        const del = { ...visitors[i], deletedAt: new Date().toLocaleString() };
+        deletedVisitors.push(del);
+        visitors.splice(i, 1);
+      });
+      localStorage.setItem('visitorLogs', JSON.stringify(visitors));
+      localStorage.setItem('deletedVisitors', JSON.stringify(deletedVisitors));
+      renderVisitors();
+      renderDeletedVisitors();
+    }
+
+    function permanentlyDeleteSelected() {
+      const selected = document.querySelectorAll(".deletedCheckbox:checked");
+      if (!selected.length) return alert("No deleted visitor selected.");
+      if (!confirm("Permanently delete selected visitors?")) return;
+      [...selected].reverse().forEach(checkbox => {
+        deletedVisitors.splice(parseInt(checkbox.value), 1);
+      });
+      localStorage.setItem('deletedVisitors', JSON.stringify(deletedVisitors));
+      renderDeletedVisitors();
+    }
+
+    function toggleSelectAll(source, type) {
+      const checkboxes = document.querySelectorAll(`.${type}Checkbox`);
+      checkboxes.forEach(c => c.checked = source.checked);
+    }
+
+    function searchVisitor() {
+      const input = document.getElementById("searchInput").value.toUpperCase();
+      const rows = document.querySelectorAll("#visitorTableBody tr");
+      rows.forEach(row => {
+        const nameCell = row.cells[1]; // because checkbox is at index 0
+        row.style.display = nameCell.textContent.toUpperCase().includes(input) ? "" : "none";
+      });
+    }
+
+    function logout() {
+      if (confirm("Are you sure you want to logout?")) {
+        window.location.href = "login.html";
+      }
+    }
+
+    function exportToCSV() {
+      if (visitors.length === 0) return alert("No visitor data to export.");
+      const headers = ["Name", "Age", "Contact", "Purpose", "Person to Visit", "Date", "Time In", "Time Out"];
+      const rows = visitors.map(v => [v.name, v.age, v.contact, v.purpose, v.person, v.date, v.timeIn, v.timeOut]);
+      let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(r => r.map(x => `"${x}"`).join(",")).join("\n");
+      const link = document.createElement("a");
+      link.setAttribute("href", encodeURI(csvContent));
+      link.setAttribute("download", "visitor_logs.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    renderVisitors();
+    renderDeletedVisitors();
+  </script>
+</body>
+</html>

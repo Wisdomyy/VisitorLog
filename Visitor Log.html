@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Visitor Log System</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 40px 20px;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      background: url('ntc3.jpg') no-repeat center center/cover;
+    }
+
+    .form-container {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      max-width: 500px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      resize: vertical;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px;
+      width: 100%;
+      background-color: #007BFF;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 100;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 20px 30px;
+      border-radius: 10px;
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+    }
+
+    .modal-content h3 {
+      margin-bottom: 20px;
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 20px;
+    }
+
+    .modal-buttons button {
+      padding: 10px 20px;
+      border-radius: 20px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .confirm-btn {
+      background-color: #28a745;
+      color: white;
+    }
+
+    .cancel-btn {
+      background-color: #dc3545;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <form class="form-container" id="visitorForm">
+    <h2>VISITOR LOG FORM</h2>
+
+    <input type="text" id="name" name="name" required placeholder="Full Name" />
+    <input type="number" id="age" name="age" required min="1" max="120" placeholder="Age" />
+    <input type="number" id="contact" name="contact" required pattern="[0-9]{10,15}" placeholder="Contact Number (e.g. 09171234567)" />
+    <textarea id="purpose" name="purpose" rows="3" required placeholder="Purpose of Visit"></textarea>
+    <input type="text" id="person" name="person" required placeholder="Person to Visit" />
+
+    <input 
+      type="text" 
+      id="date" 
+      name="date" 
+      required 
+      placeholder="Date of Visit" 
+      onfocus="(this.type='date')" 
+      onblur="if(!this.value)this.type='text'" 
+    />
+
+    <input type="time" id="timeIn" name="timeIn" required placeholder="Time In" />
+    <input type="time" id="timeOut" name="timeOut" required placeholder="Time Out" />
+
+    <button type="submit">Submit Log</button>
+  </form>
+
+  <!-- Modal -->
+  <div class="modal" id="confirmModal">
+    <div class="modal-content">
+      <h3>Are you sure you want to submit?</h3>
+      <div class="modal-buttons">
+        <button class="confirm-btn" id="confirmYes">Yes, Submit</button>
+        <button class="cancel-btn" id="confirmNo">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const dateField = document.getElementById("date");
+      const today = new Date().toISOString().split("T")[0];
+      dateField.value = today;
+      dateField.type = "date";
+    });
+
+    const form = document.getElementById("visitorForm");
+    const modal = document.getElementById("confirmModal");
+    const confirmYes = document.getElementById("confirmYes");
+    const confirmNo = document.getElementById("confirmNo");
+
+    let pendingSubmission = null;
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      pendingSubmission = new FormData(form);
+      modal.style.display = "flex";
+    });
+
+    confirmYes.addEventListener("click", () => {
+      const visitor = Object.fromEntries(pendingSubmission.entries());
+
+      const logs = JSON.parse(localStorage.getItem("visitorLogs")) || [];
+      logs.push(visitor);
+      localStorage.setItem("visitorLogs", JSON.stringify(logs));
+
+      alert("Visitor log submitted successfully!");
+      form.reset();
+      form.date.type = "text";
+      form.date.placeholder = "Date of Visit";
+      modal.style.display = "none";
+    });
+
+    confirmNo.addEventListener("click", () => {
+      modal.style.display = "none";
+      pendingSubmission = null;
+    });
+  </script>
+</body>
+</html>
